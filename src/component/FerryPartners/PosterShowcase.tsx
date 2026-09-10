@@ -1,14 +1,20 @@
+import { useCatalog } from '../../lib/catalog';
+import { useContent, useContact, useSetting } from '../../lib/content';
 import CustomDropdown from '../ui/CustomDropdown';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLanguage } from '../../i18n/LanguageContext';
 import useDialog from '../ui/useDialog';
-import { emptyFilters, filterOptions, isExpired, matchesPoster, posterCatalog } from '../../data/posterCatalog';
+import { emptyFilters, filterOptions, isExpired, matchesPoster } from '../../data/posterCatalog';
 import type { CatalogFilters, Country, Poster } from '../../data/posterCatalog';
 import './PosterShowcase.css';
 
 export default function PosterShowcase({ countryRequest = null }: { countryRequest?: { country: Country } | null }) {
   const { t, language } = useLanguage();
+  const posterCatalog = useCatalog();
+  const {rows} = useContent();
+  const contact = useContact();
+  const carousel = useSetting('carousel', {autoplay:true,interval_ms:5500,initial_delay_ms:1800,direction:'right'});
   const [filters, setFilters] = useState<CatalogFilters>(emptyFilters);
   const [selected, setSelected] = useState<Poster | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -28,7 +34,9 @@ export default function PosterShowcase({ countryRequest = null }: { countryReque
   const items = posterCatalog.filter(item => matchesPoster(item, filters));
   const activeFilters = Object.values(filters).filter(Boolean).length;
   const isMoving = playing && !interacting && !keyboardFocus && visible && pageVisible && !selected && !reducedMotion && position.scrollable;
-  const serviceLabel = (service: string) => t(service === 'ferry' ? 'Tiket Ferry' : 'Paket Wisata');
+  const serviceLabel = (service: string) => rows?.service_types.find(r=>r.slug===service)?.[`name_${language}`] || t(service === 'ferry' ? 'Tiket Ferry' : 'Paket Wisata');
+  const countryLabel = (country: string) => rows?.countries.find(r=>r.name_id===country)?.[`name_${language}`] || t(country);
+  useEffect(() => { setPlaying(carousel.autoplay && !reducedMotion); }, [carousel.autoplay, reducedMotion]);
 
   useEffect(() => {
     if (!countryRequest) return;
@@ -39,6 +47,8 @@ export default function PosterShowcase({ countryRequest = null }: { countryReque
     field?.focus({ preventScroll: true });
     sectionRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
   }, [countryRequest]);
+
+  useEffect(() => { if(selected && !posterCatalog.some(p=>p.id===selected.id)) setSelected(null); }, [posterCatalog,selected]);
 
   function pauseBriefly() {
     setInteracting(true);
@@ -103,7 +113,7 @@ export default function PosterShowcase({ countryRequest = null }: { countryReque
     const observer = new ResizeObserver(resetPosition);
     observer.observe(track);
     return () => { observer.disconnect(); if (settleTimer.current) clearTimeout(settleTimer.current); };
-  }, [filters, position.scrollable]);
+  }, [filters, position.scrollable, posterCatalog]);
 
   useEffect(() => {
     if (!isMoving) return;
@@ -113,13 +123,13 @@ export default function PosterShowcase({ countryRequest = null }: { countryReque
       const card = track?.querySelector<HTMLElement>('.poster-card');
       if (!track || !card) return;
       // Advance toward the next poster, matching the right navigation arrow.
-      track.scrollBy({ left: card.getBoundingClientRect().width + 24, behavior: 'smooth' });
-      timer = setTimeout(advance, 5500);
+      track.scrollBy({ left: (carousel.direction === 'right' ? -1 : 1) * (card.getBoundingClientRect().width + 24), behavior: 'smooth' });
+      timer = setTimeout(advance, Math.max(2000, Number(carousel.interval_ms) || 5500));
     }
     // Show movement soon after the catalogue enters the viewport, then let it rest.
-    timer = setTimeout(advance, 1800);
+    timer = setTimeout(advance, Math.max(500, Number(carousel.initial_delay_ms) || 1800));
     return () => clearTimeout(timer);
-  }, [isMoving]);
+  }, [isMoving, carousel.direction, carousel.interval_ms, carousel.initial_delay_ms]);
 
   function changeFilter(key: keyof CatalogFilters, value: string) {
     pauseBriefly();
@@ -135,9 +145,9 @@ export default function PosterShowcase({ countryRequest = null }: { countryReque
   function reset() { setFilters(emptyFilters); pauseBriefly(); }
   function whatsapp(item: Poster) {
     const message = language === 'en'
-      ? `Hello Reservasi.id! I'm interested in ${item.title.en} (${item.provider}). Please confirm the current schedule, price and availability. Poster reference: ${item.id}. Thank you.`
-      : `Halo Reservasi.id! Saya tertarik dengan ${item.title.id} (${item.provider}). Mohon konfirmasi jadwal, harga terbaru dan ketersediaannya. Referensi poster: ${item.id}. Terima kasih.`;
-    return `https://wa.me/6285265182020?text=${encodeURIComponent(message)}`;
+      ? `Hello ${contact.brand}! I'm interested in ${item.title.en} (${item.provider}). Please confirm the current schedule, price and availability. Poster reference: ${item.id}. Thank you.`
+      : `Halo ${contact.brand}! Saya tertarik dengan ${item.title.id} (${item.provider}). Mohon konfirmasi jadwal, harga terbaru dan ketersediaannya. Referensi poster: ${item.id}. Terima kasih.`;
+    return `https://wa.me/${contact.whatsapp}?text=${encodeURIComponent(message)}`;
   }
 
   return (
@@ -150,9 +160,9 @@ export default function PosterShowcase({ countryRequest = null }: { countryReque
 
         <div className="poster-filter-panel" data-reveal data-reveal-delay="80">
           <div className="poster-filters">
-            <CustomDropdown id="poster-country" label={t('Negara tujuan')} value={filters.country} onChange={value => changeFilter('country', value)} options={[{ value: '', city: t('Semua negara') }, ...filterOptions(filters, 'country').map(option => ({ value: option, city: option }))]} />
-            <CustomDropdown id="poster-service" label={t('Jenis layanan')} value={filters.service} onChange={value => changeFilter('service', value)} options={[{ value: '', city: t('Semua layanan') }, ...filterOptions(filters, 'service').map(option => ({ value: option, city: serviceLabel(option) }))]} />
-            <CustomDropdown id="poster-provider" label={t('Provider')} value={filters.provider} onChange={value => changeFilter('provider', value)} options={[{ value: '', city: t('Semua provider') }, ...filterOptions(filters, 'provider').map(option => ({ value: option, city: option }))]} />
+            <CustomDropdown id="poster-country" label={t('Negara tujuan')} value={filters.country} onChange={value => changeFilter('country', value)} options={[{ value: '', city: t('Semua negara') }, ...filterOptions(filters, 'country', posterCatalog).map(option => ({ value: option, city: countryLabel(option) }))]} />
+            <CustomDropdown id="poster-service" label={t('Jenis layanan')} value={filters.service} onChange={value => changeFilter('service', value)} options={[{ value: '', city: t('Semua layanan') }, ...filterOptions(filters, 'service', posterCatalog).map(option => ({ value: option, city: serviceLabel(option) }))]} />
+            <CustomDropdown id="poster-provider" label={t('Provider')} value={filters.provider} onChange={value => changeFilter('provider', value)} options={[{ value: '', city: t('Semua provider') }, ...filterOptions(filters, 'provider', posterCatalog).map(option => ({ value: option, city: option }))]} />
           </div>
           <div className="poster-filter-note"><span>{t('Bebas pilih filter, atau jelajahi semuanya.')}</span>{activeFilters > 0 && <button onClick={reset}>{t('Reset filter')} <span aria-hidden="true">×</span></button>}</div>
         </div>
@@ -171,7 +181,7 @@ export default function PosterShowcase({ countryRequest = null }: { countryReque
               <img src={item.thumbnail} alt={item.title[language]} loading="lazy" decoding="async" width="720" height="900" />
               <span className="poster-zoom-label"><span aria-hidden="true">⤢</span> {t('Lihat poster')}</span>
             </button>
-            <div className="poster-card-body"><div className="poster-tags"><span className={item.service === 'package' ? 'poster-tag-tour' : ''}>{serviceLabel(item.service)}</span><span>{item.countries.map(country => t(country)).join(' · ')}</span></div><p className="poster-provider">{item.provider}</p><h3><button tabIndex={copy === 0 ? 0 : -1} onClick={() => openPoster(item)}>{item.title[language]}</button></h3><p className="poster-description">{item.description[language]}</p>{isExpired(item) && <p className="poster-expired">{t('Periode promo pada poster berakhir')}</p>}<button tabIndex={copy === 0 ? 0 : -1} className="poster-detail-link" onClick={() => openPoster(item)}>{t('Lihat detail')} <span aria-hidden="true">↗</span></button></div>
+            <div className="poster-card-body"><div className="poster-tags">{item.kind === 'promo' && <span className="poster-tag-tour">Promo</span>}<span className={item.service === 'package' ? 'poster-tag-tour' : ''}>{serviceLabel(item.service)}</span><span>{item.countries.map(countryLabel).join(' · ')}</span></div><p className="poster-provider">{item.provider}</p><h3><button tabIndex={copy === 0 ? 0 : -1} onClick={() => openPoster(item)}>{item.title[language]}</button></h3><p className="poster-description">{item.description[language]}</p><p className={isExpired(item) ? 'poster-expired' : 'poster-validity'}>{isExpired(item) ? (language === 'en' ? 'Offer has ended' : 'Sudah berakhir') : item.validUntil ? `${language === 'en' ? 'Valid through' : 'Berlaku sampai'} ${new Date(`${item.validUntil}T00:00:00+07:00`).toLocaleDateString(language === 'en' ? 'en-GB' : 'id-ID', {timeZone:'Asia/Jakarta',day:'numeric',month:'short',year:'numeric'})}` : (language === 'en' ? 'Valid until updated' : 'Berlaku sampai diperbarui')}</p><button tabIndex={copy === 0 ? 0 : -1} className="poster-detail-link" onClick={() => openPoster(item)}>{t('Lihat detail')} <span aria-hidden="true">↗</span></button></div>
           </article>))}
           </div>
           <button className="poster-side-arrow poster-side-arrow-left" disabled={!position.scrollable} onClick={() => move(-1)} aria-controls="poster-track" aria-label={t('Poster sebelumnya')}><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m14 6-6 6 6 6" /></svg></button>
@@ -185,7 +195,7 @@ export default function PosterShowcase({ countryRequest = null }: { countryReque
         <header className="poster-dialog-header"><div><p>{selected.provider}</p><h2 id="poster-dialog-title">{selected.title[language]}</h2></div><button onClick={() => setSelected(null)} aria-label={t('Tutup poster')}>×</button></header>
         <div className="poster-dialog-tools"><span>{t('Geser gambar setelah diperbesar')}</span><div><button disabled={zoom <= 1} onClick={() => setZoom(value => Math.max(1, value - .5))} aria-label={t('Perkecil gambar')}>−</button><button onClick={() => setZoom(1)} aria-label={t('Reset ukuran gambar')}>{Math.round(zoom * 100)}%</button><button disabled={zoom >= 3} onClick={() => setZoom(value => Math.min(3, value + .5))} aria-label={t('Perbesar gambar')}>+</button></div></div>
         <div className="poster-viewer" tabIndex={0} role="region" aria-label={t('Gambar poster')}><img src={selected.image} alt={`${selected.title[language]}. ${selected.description[language]}`} style={{ width: `${zoom * 100}%` }} /></div>
-        <footer className="poster-dialog-footer"><div>{selected.period && <p className={isExpired(selected) ? 'poster-expired' : ''}>{selected.period[language]}</p>}<p>{t(isExpired(selected) ? 'Promo ini sudah berakhir. Tanyakan penawaran yang berlaku kepada admin.' : 'Konfirmasi harga dan ketersediaan dengan admin.')}</p><small>{t('Tulisan pada poster mengikuti bahasa aslinya.')}</small></div><a href={whatsapp(selected)} target="_blank" rel="noreferrer">{t('Tanyakan via WhatsApp')} <span aria-hidden="true">↗</span></a></footer>
+        <footer className="poster-dialog-footer"><div><p>{language === 'en' ? 'Validity' : 'Masa berlaku'}: {selected.validFrom || '?'} ? {selected.validUntil || (language === 'en' ? 'Until updated' : 'Sampai diperbarui')}</p>{selected.period && <p className={isExpired(selected) ? 'poster-expired' : ''}>{selected.period[language]}</p>}<p>{t(isExpired(selected) ? 'Penawaran ini sudah berakhir. Tanyakan informasi terbaru kepada admin.' : 'Konfirmasi harga dan ketersediaan dengan admin.')}</p><small>{t('Tulisan pada poster mengikuti bahasa aslinya.')}</small></div><a href={whatsapp(selected)} target="_blank" rel="noreferrer">{t('Tanyakan via WhatsApp')} <span aria-hidden="true">↗</span></a></footer>
       </div></div>, document.body)}
     </section>
   );

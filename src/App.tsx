@@ -9,9 +9,17 @@ import AboutUs from './component/AboutUs/AboutUs'
 import useScrollReveal from './component/ui/useScrollReveal';
 
 import './App.css'
+import { useContent, useSetting } from './lib/content';
+import { configured } from './lib/supabase';
 
 export default function App() {
+  const { rows, loading, error, refresh } = useContent();
+  if (configured && !rows) return <main className="content-loading"><img src="/logo.svg" alt="Reservasi.id" width="48"/><p role={error?'alert':'status'}>{loading?'Menyiapkan perjalanan Anda…':error}</p>{error&&<button onClick={refresh}>Coba lagi</button>}</main>;
+  return <Website />;
+}
+function Website() {
   useScrollReveal();
+  const sections = useSetting('sections');
   const { t } = useLanguage();
   const [catalogRequest, setCatalogRequest] = useState<{ country: Country } | null>(null);
   return (
@@ -19,11 +27,11 @@ export default function App() {
       <a className="skip-link" href="#main">{t("Lewati ke konten utama")}</a>
       <Navbar/>
       <main id="main">
-      <Hero/>
-      <TopDestinations onExplore={country => setCatalogRequest({ country })}/>
-      <PosterShowcase countryRequest={catalogRequest}/>
+      {sections.hero !== false && <Hero/>}
+      {sections.destinations !== false && <TopDestinations onExplore={country => setCatalogRequest({ country })}/>}
+      {sections.catalog !== false && <PosterShowcase countryRequest={catalogRequest}/>}
       </main>
-      <AboutUs/>
+      {sections.about !== false && <AboutUs/>}
     </>
   )
 }

@@ -5,15 +5,26 @@ import './Hero.css';
 import img1 from '../../assets/herophotos/image1.webp';
 import img2 from '../../assets/herophotos/image2.webp';
 import img3 from '../../assets/herophotos/image3.webp';
-import CountryDropdown from '../ui/CountryDropdown';
-const images = [img1, img2, img3];
+import CountryDropdown, { useCityOptions } from '../ui/CountryDropdown';
+import { useContent, useContact } from '../../lib/content';
+import { mediaUrl } from '../../lib/supabase';
+const fallbackImages = [img1, img2, img3];
 export default function Hero() {
   const { t, language } = useLanguage();
+  const { rows } = useContent();
+  const contact = useContact();
+  const cities = useCityOptions();
+  const images = rows ? rows.hero_slides.map(row => mediaUrl(rows.media_assets.find(m => m.id === row.image_id))).filter(Boolean) : fallbackImages;
   const [slide, setSlide] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [origin, setOrigin] = useState('Batam, Indonesia');
   const [destination, setDestination] = useState('Singapura');
   const [error, setError] = useState('');
+  useEffect(() => {
+    if (!cities.some(c => c.value === origin)) setOrigin(cities.find(c=>c.city==='Batam')?.value || cities[0]?.value || '');
+    if (!cities.some(c => c.value === destination)) setDestination(cities.find(c=>c.code==='SG')?.value || cities[1]?.value || cities[0]?.value || '');
+  }, [cities.map(c => c.value).join('|'), origin, destination]);
+  useEffect(() => { setSlide(0); }, [images.length]);
   useEffect(() => {
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
     setPlaying(!preference.matches);
@@ -22,20 +33,23 @@ export default function Hero() {
     return () => preference.removeEventListener('change', update);
   }, []);
   useEffect(() => {
-    if (!playing) return;
+    if (!playing || images.length < 2) return;
     const timer = window.setInterval(() => {
       if (!document.hidden) setSlide(current => (current + 1) % images.length);
     }, 7000);
     return () => window.clearInterval(timer);
-  }, [playing]);
+  }, [playing, images.length]);
   function enquire(event: FormEvent) {
     event.preventDefault();
+    if (!origin || !destination) { setError('Pilih lokasi asal dan tujuan.'); return; }
     if (origin === destination) { setError('Lokasi asal dan tujuan harus berbeda.'); return; }
     setError('');
+    const originName = cities.find(c => c.value === origin)?.city || origin;
+    const destinationName = cities.find(c => c.value === destination)?.city || destination;
     const message = language === 'en'
-      ? `Hello Reservasi.id! I'd like to check ferry schedules and fares from ${t(origin)} to ${t(destination)}. Please let me know about availability. Thank you.`
-      : `Halo Admin Reservasi.id! Saya ingin cek jadwal dan harga tiket ferry dari ${origin} ke ${destination}. Mohon info ketersediaannya. Terima kasih.`;
-    window.open(`https://wa.me/6285265182020?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+      ? `Hello ${contact.brand}! I'd like to check ferry schedules and fares from ${originName} to ${destinationName}. Please let me know about availability. Thank you.`
+      : `Halo Admin ${contact.brand}! Saya ingin cek jadwal dan harga tiket ferry dari ${originName} ke ${destinationName}. Mohon info ketersediaannya. Terima kasih.`;
+    window.open(`https://wa.me/${contact.whatsapp}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
   }
   return (
     <section id="home" className="hero-section" aria-label={t("Rencanakan perjalanan ferry")}>

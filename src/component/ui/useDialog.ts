@@ -15,7 +15,7 @@ export default function useDialog(open: boolean, onClose: () => void) {
     function handleKey(event: KeyboardEvent) {
       if (event.key === 'Escape') { event.preventDefault(); closeRef.current(); }
       if (event.key !== 'Tab' || !dialog) return;
-      const focusable = [...dialog.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input,select,[tabindex="0"]')].filter(el => el.getClientRects().length > 0);
+      const focusable = [...dialog.querySelectorAll<HTMLElement>('a[href],button,input,select,textarea,[tabindex="0"]')].filter(el => el.getClientRects().length > 0 && !el.matches(':disabled') && el.tabIndex >= 0);
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (!first) { event.preventDefault(); dialog.focus(); return; }

@@ -1,3 +1,5 @@
+import { useContent } from '../../lib/content';
+import { mediaUrl } from '../../lib/supabase';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { Country } from '../../data/posterCatalog';
 import './TopDestinations.css';
@@ -7,7 +9,7 @@ import imgMalay from "../../assets/Malaysia.webp"
 import imgSingapore from "../../assets/Singapore.webp" 
 
 
-const destinations = [
+const fallbackDestinations = [
   {
     id: 1, name: "Singapura", location: "HarbourFront Centre", highlight: "Kota & Atraksi",
     image: imgSingapore,
@@ -26,7 +28,9 @@ const destinations = [
 ];
 
 const TopDestinations = ({ onExplore }: { onExplore: (country: Country) => void }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const {rows} = useContent();
+  const destinations = rows ? rows.destinations.filter(d=>rows.countries.some(c=>c.id===d.country_id)).map(d=>({id:d.id,name:d[`title_${language}`],location:rows.cities.find(c=>c.id===d.city_id)?.[`name_${language}`] || rows.countries.find(c=>c.id===d.country_id)?.[`name_${language}`],highlight:d[`badge_${language}`],image:mediaUrl(rows.media_assets.find(m=>m.id===d.image_id)),desc:d[`description_${language}`],country:rows.countries.find(c=>c.id===d.country_id)?.name_id})) : fallbackDestinations.map(d=>({...d,country:d.name === 'Batam' ? 'Indonesia' : d.name}));
   return (
     <section id="destinations" className="dest-section">
       <div className="container">
@@ -43,7 +47,7 @@ const TopDestinations = ({ onExplore }: { onExplore: (country: Country) => void 
           {destinations.map((item, index) => (
             <div key={item.id} className="dest-card" data-reveal data-reveal-delay={index * 90}>
               <div className="card-image-wrapper">
-                <img loading="lazy" decoding="async" src={item.image} alt={t(item.name)} />
+                {item.image && <img loading="lazy" decoding="async" src={item.image} alt={t(item.name)} />}
                 <div className="destination-country-tag">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c-5 5-5 13 0 18 5-5 5-13 0-18Z"/></svg>
                   <span>{t(item.highlight)}</span>
@@ -57,7 +61,7 @@ const TopDestinations = ({ onExplore }: { onExplore: (country: Country) => void 
                 <h3>{t(item.name)}</h3>
                 <p>{t(item.desc)}</p>
                 
-                <button className="btn-detail" onClick={() => onExplore(item.name === 'Batam' ? 'Indonesia' : item.name === 'Malaysia' ? 'Malaysia' : 'Singapura')}>{t("Jelajahi pilihan")}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                <button className="btn-detail" onClick={() => onExplore(item.country)}>{t("Jelajahi pilihan")}<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                 </button>
               </div>
             </div>

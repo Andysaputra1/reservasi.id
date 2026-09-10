@@ -1,9 +1,14 @@
+import { useContent, useContact, useSetting } from '../../lib/content';
 import { useLanguage } from '../../i18n/LanguageContext';
 import React from 'react';
+import { mediaUrl } from '../../lib/supabase';
 import './AboutUs.css';
 
 const AboutUs: React.FC = () => {
   const { t } = useLanguage();
+  const contact=useContact();
+  const {rows}=useContent();
+  const sections=useSetting('sections');
   return (
     <footer id="about" className="footer-section">
       <div className="container">
@@ -12,8 +17,8 @@ const AboutUs: React.FC = () => {
           {/* Kolom 1: Brand & Deskripsi */}
           <div className="footer-brand">
             <div className="brand-logo">
-              <img src="/logo.svg" alt="Reservasi.id" />
-              <h2>Reservasi.id</h2>
+              <img src={mediaUrl(rows?.media_assets.find(m=>m.id===contact.logo_id)) || "/logo.svg"} alt="Reservasi.id" />
+              <h2>{contact.brand}</h2>
             </div>
             <p>{t("Partner perjalanan laut terpercaya Anda. Kami menyediakan layanan pemesanan tiket ferry termudah untuk rute Indonesia, Singapura, dan Malaysia.")}</p>
           </div>
@@ -22,10 +27,10 @@ const AboutUs: React.FC = () => {
           <div className="footer-links">
             <h3>Menu</h3>
             <ul>
-              <li><a href="#home">{t("Beranda")}</a></li>
-              <li><a href="#destinations">{t("Destinasi")}</a></li>
-              <li><a href="#schedule">{t("Jadwal Kapal")}</a></li>
-              <li><a href="https://wa.me/6285265182020" target="_blank" rel="noreferrer">{t("Bantuan")}</a></li>
+              {sections.hero !== false && <li><a href="#home">{t("Beranda")}</a></li>}
+              {sections.destinations !== false && <li><a href="#destinations">{t("Destinasi")}</a></li>}
+              {sections.catalog !== false && <li><a href="#schedule">{t("Jadwal Kapal")}</a></li>}
+              <li><a href={`https://wa.me/${contact.whatsapp}`} target="_blank" rel="noreferrer">{t("Bantuan")}</a></li>
             </ul>
           </div>
 
@@ -35,12 +40,12 @@ const AboutUs: React.FC = () => {
             <ul className="contact-list">
               <li>
                 <span className="icon">📍</span>
-                <span>Batam, Indonesia</span>
+                <span>{contact.address}</span>
               </li>
               <li>
                 <span className="icon">📞</span>
-                <a href="https://wa.me/6285265182020" target="_blank" rel="noreferrer">
-                  +62 852 6518 2020 (WhatsApp)
+                <a href={`https://wa.me/${contact.whatsapp}`} target="_blank" rel="noreferrer">
+                  +{contact.whatsapp} (WhatsApp)
                 </a>
               </li>
         
@@ -54,7 +59,7 @@ const AboutUs: React.FC = () => {
 
         {/* Copyright Bar */}
         <div className="footer-bottom">
-          <p>&copy; {new Date().getFullYear()} Reservasi.id. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} {contact.brand}. All rights reserved.</p>
         </div>
       </div>
     </footer>

@@ -1,5 +1,5 @@
-export type Country = 'Indonesia' | 'Singapura' | 'Malaysia';
-export type Service = 'ferry' | 'package';
+export type Country = string;
+export type Service = string;
 export type CatalogFilters = { country: string; service: string; provider: string };
 export type Poster = {
   id: string;
@@ -11,6 +11,9 @@ export type Poster = {
   service: Service;
   provider: string;
   validUntil?: string;
+  validFrom?: string;
+  kind?: 'promo' | 'price';
+  expiryAction?: 'label' | 'hide';
   period?: { id: string; en: string };
 };
 
@@ -45,8 +48,8 @@ export function matchesPoster(item: Poster, filters: CatalogFilters) {
     && (!filters.service || item.service === filters.service)
     && (!filters.provider || item.provider === filters.provider);
 }
-export function filterOptions(filters: CatalogFilters, key: keyof CatalogFilters) {
-  const compatible = posterCatalog.filter(item => matchesPoster(item, { ...filters, [key]: '' }));
+export function filterOptions(filters: CatalogFilters, key: keyof CatalogFilters, catalog = posterCatalog) {
+  const compatible = catalog.filter(item => matchesPoster(item, { ...filters, [key]: '' }));
   return [...new Set(compatible.flatMap(item => key === 'country' ? item.countries : [item[key]]))];
 }
 export function isExpired(item: Poster, now = new Date()) {

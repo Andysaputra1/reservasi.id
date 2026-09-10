@@ -1,8 +1,8 @@
 # Database Reservasi.id
 
-SQL untuk fondasi panel admin `/panel`. Folder ini **belum membuat halaman panel
-atau menghubungkan frontend ke Supabase**. Website tetap memakai data lokal sampai
-integrasi berikutnya selesai.
+Panel admin tersedia di `/panel`. Website membaca konten terpublikasi dari Supabase,
+termasuk poster, kota, foto, destinasi, teks dua bahasa, dan kontak. Panel memakai
+Supabase Auth dengan username `administrator` yang dipetakan ke email akun admin.
 
 ## Jalankan di Supabase
 
@@ -13,6 +13,9 @@ sebagai role `postgres`, pada project yang sesuai:
 1. `migrations/202609100001_content_schema.sql`
 2. `migrations/202609100002_storage.sql`
 3. `migrations/202609100003_seed_content.sql`
+4. `migrations/202609100004_poster_lifecycle.sql`
+
+Project saat ini sudah menerapkan keempat migrasi. Jangan menjalankannya ulang.
 
 Setiap file memakai transaksi. Lanjutkan hanya jika file sebelumnya berhasil.
 Migrasi ditujukan untuk pemasangan pertama: jangan jalankan ulang file yang sudah
@@ -27,7 +30,7 @@ SQL Editor tidak mencatat riwayat CLI secara otomatis; jangan kemudian menjalank
 
 ## Tetapkan admin
 
-Login panel direncanakan memakai **username `administrator` dan password**.
+Login panel memakai **username `administrator` dan password**.
 Form tidak meminta email. Di balik layar, username tersebut dipetakan ke
 `andychensaputra@gmail.com`, email akun admin di Supabase Auth.
 [Login password Supabase](https://supabase.com/docs/reference/javascript/auth-signinwithpassword)
@@ -41,12 +44,12 @@ dan RLS yang sudah disiapkan tanpa membuat sistem password sendiri.
 
 Password tidak disimpan dalam migrasi, source code, atau `.env` frontend. File SQL
 ini hanya memberikan akses pada akun yang sudah dibuat, bukan membuat akun atau
-mengatur password. Pemetaan username akan diterapkan saat halaman `/panel` dibuat.
+mengatur password. Pemetaan username diterapkan di `src/lib/supabase.ts`. Password dimasukkan di form login dan diverifikasi oleh Supabase Auth.
 Email akun dapat digunakan untuk pemulihan password ketika alur reset password
 dan redirect URL aplikasi sudah dikonfigurasi. Form login tetap memakai username.
 
 Login saja tidak memberikan akses admin. Hanya akun yang terdaftar di
-`private.admin_users` yang dapat mengubah data. Panel nanti login melalui Supabase
+`private.admin_users` yang dapat mengubah data. Panel login melalui Supabase
 Auth dan memanggil RPC `is_admin()` untuk memeriksa akses. RLS tetap melindungi data
 meskipun pemeriksaan UI dilewati. Signup publik dapat dimatikan di pengaturan Auth
 jika hanya admin yang perlu login.
@@ -81,8 +84,13 @@ Publik hanya membaca baris yang dipublikasikan; admin dapat membaca dan mengubah
 semua baris. Status publikasi tiap entitas berdiri sendiri: ketika memublikasikan
 poster, panel harus memastikan provider, layanan, tujuan, dan medianya juga siap.
 Foreign key mencegah penghapusan data yang masih digunakan. Hapus relasi atau
-ganti referensi dahulu. `valid_until` hanya penanda periode, tidak otomatis
-menghapus/menyembunyikan poster yang kedaluwarsa.
+ganti referensi dahulu. Poster memiliki `kind` (promo/harga), `status` (draft/tayang/arsip), `valid_from`,
+`valid_until`, serta `expiry_action` (label/sembunyikan). Tanggal mengikuti WIB.
+Tanggal mulai di masa depan membuat poster terjadwal. Tanggal akhir kosong berarti
+berlaku sampai diperbarui. Pada akhir masa berlaku, pilihan `hide` menutup akses
+publik lewat RLS; pilihan `label` tetap menampilkan poster dengan penanda berakhir.
+`save_poster` menyimpan metadata dan tujuan dalam satu transaksi. Status publikasi
+poster otomatis menyelaraskan `is_published` lewat trigger.
 
 ## Foto dan Storage
 
@@ -95,13 +103,14 @@ pribadi. Jika project punya policy Storage lain yang terlalu luas, policy terseb
 juga harus diperiksa karena policy PostgreSQL yang permisif digabung dengan OR.
 
 SQL tidak mengupload file. Seed `media_assets.source_path` mengarah ke 32 file asli
-dan thumbnail di repo. `object_path` masih kosong sampai upload dilakukan:
+dan thumbnail di repo. **Ke-32 file untuk project saat ini sudah diupload**, dan
+`object_path` sudah diisi. Untuk pemasangan pada project baru:
 
 1. Upload melalui Storage Dashboard atau Storage API menggunakan sesi admin.
 2. Gunakan nama unik, misalnya `posters/<uuid>.webp`, lalu simpan path tersebut
    pada `media_assets.object_path` terkait. Simpan path, bukan signed URL.
-3. Frontend nanti memprioritaskan Storage jika `object_path` tersedia; fallback
-   lokal harus memakai pemetaan asset Vite, bukan menjadikan `src/...` URL produksi.
+3. Frontend memprioritaskan Storage jika `object_path` tersedia; fallback
+   lokal memakai pemetaan asset Vite, bukan menjadikan `src/...` URL produksi.
 4. Saat mengganti gambar, upload file baru, ubah referensi database, baru hapus
    file lama setelah memastikan tidak ada referensi lain. Ini menghindari cache
    gambar lama dan tautan rusak. Penghapusan metadata tidak otomatis menghapus file.
@@ -111,10 +120,11 @@ gunakan Storage API untuk operasi file.
 
 ## Environment saat integrasi frontend
 
-Project ini memakai Vite. Nama `NEXT_PUBLIC_SUPABASE_URL` dan
-`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` yang sekarang ada perlu disesuaikan saat
-integrasi menjadi `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY`.
-Nilai `.env` belum diubah oleh migrasi ini. Publishable key boleh dipakai frontend
+Project ini memakai Vite. Nama environment yang digunakan adalah `VITE_SUPABASE_URL` dan
+`VITE_SUPABASE_PUBLISHABLE_KEY` (lihat `.env.example`). `.env` lokal sudah
+disesuaikan tanpa mengubah nilai key. Konfigurasi build juga menerima nama lama
+`NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` agar
+kompatibel dengan pengaturan hosting sebelumnya. Publishable key boleh dipakai frontend
 dengan RLS, tetapi database password dan service-role/secret key tidak boleh
 memakai prefix `VITE_` atau masuk bundle browser.
 
@@ -129,7 +139,7 @@ dan akses admin termasuk Storage. Jalankan dengan Node dan path paket PGlite:
 node supabase/tests/check-migrations.mjs <path-ke-@electric-sql/pglite/dist/index.js>
 ```
 
-Paket tes dipasang terpisah di folder sementara, bukan dependency aplikasi.
+Paket tes tersedia sebagai development dependencies. Jalankan `npm test` untuk tes panel dan database, serta `npm run build` untuk pemeriksaan TypeScript dan build produksi.
 Tes ini tidak terhubung ke project Supabase. Upload HTTP, login Auth sungguhan,
 policy lain yang sudah ada, dan batas MIME/ukuran perlu diperiksa saat integrasi.
 
@@ -137,3 +147,46 @@ Referensi resmi: [RLS](https://supabase.com/docs/guides/database/postgres/row-le
 [Storage access control](https://supabase.com/docs/guides/storage/security/access-control),
 [public buckets](https://supabase.com/docs/guides/storage/buckets/fundamentals),
 [migrations](https://supabase.com/docs/guides/deployment/database-migrations).
+
+
+## Menggunakan panel
+
+- Buka `/panel`, masuk dengan username `administrator` dan password akun admin.
+- Pilih menu, lalu **Tambah** atau **Edit**. Negara, kota, layanan, provider,
+  destinasi, foto beranda, dan pustaka gambar memakai formulir masing-masing.
+- Untuk poster, pilih negara/kota, provider, layanan, gambar, jenis penawaran,
+  tanggal, tindakan setelah berakhir, dan status. Simpan setelah selesai.
+- Publikasikan data pendukung yang masih draft sebelum menayangkan poster.
+- Upload gambar baru masuk ke pustaka. Penggantian file gambar yang sudah ada baru
+  berlaku setelah **Simpan perubahan**; file upload yang dibatalkan tetap dapat
+  berada di Storage. File lama tidak dihapus otomatis agar tautan tetap aman.
+- Teks dua bahasa, kontak/logo, visibilitas bagian, dan autoplay bisa diedit melalui
+  **Teks & pengaturan**. Nomor WhatsApp berlaku untuk seluruh tombol inquiry aktif.
+- Tombol **Pesan tiket** mengarahkan ke katalog terkini, sehingga tidak menampilkan
+  jadwal/harga dari JSON lama yang belum dikelola melalui panel.
+- **Lihat website** membuka tampilan publik. Client publik terpisah dari sesi admin,
+  sehingga draft tetap tidak muncul saat admin melihat website.
+- Halaman publik mengambil perubahan saat dibuka, saat kembali ke tab, dan tiap
+  60 detik. Jika koneksi awal gagal, halaman menawarkan coba lagi, tanpa diam-diam
+  menampilkan katalog lokal yang mungkin sudah kedaluwarsa. Mode data lokal hanya
+  digunakan ketika environment Supabase sama sekali belum dikonfigurasi.
+
+## Hosting
+
+Build dengan `npm run build`. Pastikan dua environment public Supabase tersedia
+pada hosting sebelum build. Tidak ada service-role key di browser. `vercel.json`
+dan `public/_redirects` menyediakan fallback `/panel` untuk Vercel dan host yang
+mendukung `_redirects`. Pada host lain, arahkan `/panel` dan `/panel/` ke `index.html`.
+
+## Pemeriksaan panel
+
+Tes DOM lokal (API dimock) tersedia di `tests/panel.test.mjs`:
+
+```text
+node tests/panel.test.mjs <path-ke-jsdom/lib/api.js>
+```
+
+Tes memeriksa login username, akses panel, validasi tanggal, payload penyimpanan
+poster dan relasi tujuan, serta regresi klik kedua dropdown. Tes SQL juga memeriksa
+penjadwalan, expiry, dan rollback penyimpanan atomik. Integrasi langsung pada project
+saat ini sudah diuji menggunakan poster draft sementara yang kemudian dihapus.
