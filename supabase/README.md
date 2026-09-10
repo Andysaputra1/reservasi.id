@@ -14,8 +14,9 @@ sebagai role `postgres`, pada project yang sesuai:
 2. `migrations/202609100002_storage.sql`
 3. `migrations/202609100003_seed_content.sql`
 4. `migrations/202609100004_poster_lifecycle.sql`
+5. `migrations/202609100005_content_workflow.sql`
 
-Project saat ini sudah menerapkan keempat migrasi. Jangan menjalankannya ulang.
+Project saat ini sudah menerapkan kelima migrasi. Jangan menjalankannya ulang.
 
 Setiap file memakai transaksi. Lanjutkan hanya jika file sebelumnya berhasil.
 Migrasi ditujukan untuk pemasangan pertama: jangan jalankan ulang file yang sudah
@@ -83,8 +84,8 @@ Data baru default draft (`is_published = false`), urutan memakai `sort_order`.
 Publik hanya membaca baris yang dipublikasikan; admin dapat membaca dan mengubah
 semua baris. Status publikasi tiap entitas berdiri sendiri: ketika memublikasikan
 poster, panel harus memastikan provider, layanan, tujuan, dan medianya juga siap.
-Foreign key mencegah penghapusan data yang masih digunakan. Hapus relasi atau
-ganti referensi dahulu. Poster memiliki `kind` (promo/harga), `status` (draft/tayang/arsip), `valid_from`,
+Foreign key mencegah penghapusan negara/provider yang masih digunakan. Hapus relasi atau
+ganti referensi dahulu. Foto milik konten dilepas dan dibersihkan otomatis oleh migrasi 005. Poster memiliki `kind` (promo/harga), `status` (draft/tayang/arsip), `valid_from`,
 `valid_until`, serta `expiry_action` (label/sembunyikan). Tanggal mengikuti WIB.
 Tanggal mulai di masa depan membuat poster terjadwal. Tanggal akhir kosong berarti
 berlaku sampai diperbarui. Pada akhir masa berlaku, pilihan `hide` menutup akses
@@ -103,7 +104,7 @@ pribadi. Jika project punya policy Storage lain yang terlalu luas, policy terseb
 juga harus diperiksa karena policy PostgreSQL yang permisif digabung dengan OR.
 
 SQL tidak mengupload file. Seed `media_assets.source_path` mengarah ke 32 file asli
-dan thumbnail di repo. **Ke-32 file untuk project saat ini sudah diupload**, dan
+dan thumbnail di repo. **Ke-32 file awal untuk project saat ini sudah diupload; 13 thumbnail terpisah kemudian dipensiunkan oleh migrasi 005**, dan
 `object_path` sudah diisi. Untuk pemasangan pada project baru:
 
 1. Upload melalui Storage Dashboard atau Storage API menggunakan sesi admin.
@@ -113,7 +114,7 @@ dan thumbnail di repo. **Ke-32 file untuk project saat ini sudah diupload**, dan
    lokal memakai pemetaan asset Vite, bukan menjadikan `src/...` URL produksi.
 4. Saat mengganti gambar, upload file baru, ubah referensi database, baru hapus
    file lama setelah memastikan tidak ada referensi lain. Ini menghindari cache
-   gambar lama dan tautan rusak. Penghapusan metadata tidak otomatis menghapus file.
+   gambar lama dan tautan rusak. Penghapusan konten menggunakan antrean `media_cleanup` untuk menghapus file melalui Storage API.
 
 Jangan menulis/menghapus baris `storage.objects` secara manual pada project asli;
 gunakan Storage API untuk operasi file.
@@ -153,13 +154,27 @@ Referensi resmi: [RLS](https://supabase.com/docs/guides/database/postgres/row-le
 
 - Buka `/panel`, masuk dengan username `administrator` dan password akun admin.
 - Pilih menu, lalu **Tambah** atau **Edit**. Negara, kota, layanan, provider,
-  destinasi, foto beranda, dan pustaka gambar memakai formulir masing-masing.
+  destinasi, dan foto beranda memakai formulir masing-masing. Tidak ada pustaka gambar atau pemilih gambar lama.
 - Untuk poster, pilih negara/kota, provider, layanan, gambar, jenis penawaran,
   tanggal, tindakan setelah berakhir, dan status. Simpan setelah selesai.
 - Publikasikan data pendukung yang masih draft sebelum menayangkan poster.
-- Upload gambar baru masuk ke pustaka. Penggantian file gambar yang sudah ada baru
-  berlaku setelah **Simpan perubahan**; file upload yang dibatalkan tetap dapat
-  berada di Storage. File lama tidak dihapus otomatis agar tautan tetap aman.
+- Setiap konten memakai satu gambar miliknya sendiri. Pilih file langsung di editor;
+  upload baru dilakukan saat **Simpan perubahan**. Gambar poster dan thumbnail memakai
+  file yang sama. Untuk memakai gambar serupa pada konten lain, upload kembali.
+- Mengganti gambar atau menghapus konten otomatis mengantrekan foto lama untuk
+  dihapus melalui Storage API. Metadata dilepas dalam transaksi database. Panel
+  mencoba penghapusan file setelah save/delete dan saat login. Jika gagal karena
+  koneksi, pesan ditampilkan dengan tombol **Coba bersihkan foto**; antrean tetap
+  tersimpan untuk percobaan ulang. Gambar yang masih direferensikan tidak dihapus.
+- **Preview** tersedia dari daftar poster dan editor. Preview editor mencakup judul,
+  deskripsi, pilihan foto lokal, layanan, provider, tujuan, dan tanggal yang belum
+  disimpan. Membuka preview tidak memublikasikan konten.
+- Slug tidak diisi admin. Database membuatnya dari provider, layanan, dan judul
+  poster, dengan akhiran `-2`, `-3`, dan seterusnya bila ada duplikat. ID UUID tetap
+  menjadi identitas utama. Entitas lain menggunakan nama atau judulnya.
+- **Posisi tampil** berupa pilihan 1 sampai jumlah konten (ditambah satu untuk
+  konten baru). `save_content` menggeser posisi lain secara atomik; `delete_content`
+  merapatkan urutan setelah penghapusan. Tidak ada nomor urut ganda dari alur panel.
 - Teks dua bahasa, kontak/logo, visibilitas bagian, dan autoplay bisa diedit melalui
   **Teks & pengaturan**. Nomor WhatsApp berlaku untuk seluruh tombol inquiry aktif.
 - Tombol **Pesan tiket** mengarahkan ke katalog terkini, sehingga tidak menampilkan
@@ -190,3 +205,5 @@ Tes memeriksa login username, akses panel, validasi tanggal, payload penyimpanan
 poster dan relasi tujuan, serta regresi klik kedua dropdown. Tes SQL juga memeriksa
 penjadwalan, expiry, dan rollback penyimpanan atomik. Integrasi langsung pada project
 saat ini sudah diuji menggunakan poster draft sementara yang kemudian dihapus.
+
+Logo di Teks & pengaturan menggunakan upload langsung. Hapus logo lalu simpan untuk kembali ke logo bawaan.
