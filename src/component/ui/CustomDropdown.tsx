@@ -26,12 +26,17 @@ export default function CustomDropdown({ label, value, onChange, options: locati
   }, [open]);
   function close() { setOpen(false); trigger.current?.focus(); }
   return <div className="location-picker" ref={root} onBlur={event => {
-    if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+    if (event.currentTarget.contains(event.relatedTarget)) return;
+    // A pointer click can briefly clear focus before the trigger receives it.
+    // Let that click finish before deciding whether focus left the dropdown.
+    requestAnimationFrame(() => {
+      if (root.current && !root.current.contains(document.activeElement)) setOpen(false);
+    });
   }} onKeyDown={event => {
     if (event.key === 'Escape' && open) { event.preventDefault(); event.stopPropagation(); close(); }
   }}>
     <label htmlFor={id} className="dropdown-label">{t(label)}</label>
-    <button ref={trigger} id={id} type="button" className="location-trigger" aria-haspopup="listbox" aria-expanded={open} aria-controls={`${id}-list`} onClick={() => setOpen(!open)} onKeyDown={event => {
+    <button ref={trigger} id={id} type="button" className="location-trigger" aria-haspopup="listbox" aria-expanded={open} aria-controls={`${id}-list`} onClick={() => setOpen(current => !current)} onKeyDown={event => {
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setOpen(true); }
     }}>
       {selected.code && <span className="location-code" aria-hidden="true">{selected.code}</span>}

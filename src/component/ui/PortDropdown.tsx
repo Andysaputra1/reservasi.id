@@ -64,11 +64,16 @@ const PortDropdown: React.FC<PortDropdownProps> = ({ label, value, onChange }) =
   return (
     <div className="custom-dropdown" ref={dropdownRef} onKeyDown={event => {
         if (event.key === 'Escape' && isOpen) { event.stopPropagation(); setIsOpen(false); document.getElementById(fieldId)?.focus(); }
-      }} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setIsOpen(false); }}>
+      }} onBlur={event => {
+        if (event.currentTarget.contains(event.relatedTarget)) return;
+        requestAnimationFrame(() => {
+          if (dropdownRef.current && !dropdownRef.current.contains(document.activeElement)) setIsOpen(false);
+        });
+      }}>
       <label htmlFor={fieldId} className="dropdown-label">{t(label)}</label>
       
       {/* TRIGGER BUTTON (Tampilan Luar) */}
-      <button id={fieldId} type="button" aria-expanded={isOpen} aria-controls={`${fieldId}-options`} className="dropdown-trigger" onClick={() => setIsOpen(!isOpen)}>
+      <button id={fieldId} type="button" aria-expanded={isOpen} aria-controls={`${fieldId}-options`} className="dropdown-trigger" onClick={() => setIsOpen(current => !current)}>
         <span className="trigger-value">{t(value || 'Pilih Pelabuhan')}</span>
         <span className={`arrow-icon ${isOpen ? 'open' : ''}`}>▼</span>
       </button>
