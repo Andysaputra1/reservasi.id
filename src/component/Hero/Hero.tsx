@@ -11,7 +11,7 @@ export default function Hero() {
   const { t, language } = useLanguage();
   const [slide, setSlide] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [origin, setOrigin] = useState('Indonesia');
+  const [origin, setOrigin] = useState('Batam, Indonesia');
   const [destination, setDestination] = useState('Singapura');
   const [error, setError] = useState('');
   useEffect(() => {
@@ -30,7 +30,7 @@ export default function Hero() {
   }, [playing]);
   function enquire(event: FormEvent) {
     event.preventDefault();
-    if (origin === destination) { setError('Negara asal dan tujuan harus berbeda.'); return; }
+    if (origin === destination) { setError('Lokasi asal dan tujuan harus berbeda.'); return; }
     setError('');
     const message = language === 'en'
       ? `Hello Reservasi.id! I'd like to check ferry schedules and fares from ${t(origin)} to ${t(destination)}. Please let me know about availability. Thank you.`
@@ -53,9 +53,9 @@ export default function Hero() {
           <div className="booking-kicker"><span aria-hidden="true">↗</span>{t("MULAI PERJALANAN ANDA")}</div>
           <div className="card-header"><h2>{t("Mau berlayar ke mana?")}</h2><p>{t("Pilih rute, lalu tanyakan jadwal & harga.")}</p></div>
           <div className="hero-route-fields">
-            <CountryDropdown label="Dari negara" value={origin} onChange={value => { setOrigin(value); setError(''); }} />
-            <button type="button" className="hero-swap" aria-label={t("Tukar negara asal dan tujuan")} onClick={() => { setOrigin(destination); setDestination(origin); setError(''); }}>⇅</button>
-            <CountryDropdown label="Ke negara" value={destination} onChange={value => { setDestination(value); setError(''); }} />
+            <CountryDropdown label="Dari" value={origin} onChange={value => { setOrigin(value); setError(''); }} />
+            <button type="button" className="hero-swap" aria-label={t("Tukar lokasi asal dan tujuan")} onClick={() => { setOrigin(destination); setDestination(origin); setError(''); }}>⇅</button>
+            <CountryDropdown label="Ke" value={destination} onChange={value => { setDestination(value); setError(''); }} />
           </div>
           {error && <p className="form-error" role="alert">{t(error)}</p>}
           <button type="submit" className="btn-search">{t("Tanyakan tiket via WhatsApp")}<span aria-hidden="true">↗</span></button>

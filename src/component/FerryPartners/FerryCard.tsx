@@ -1,3 +1,4 @@
+import CustomDropdown from '../ui/CustomDropdown';
 import useDialog from '../ui/useDialog';
 import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
@@ -267,16 +268,8 @@ Mohon info ketersediaannya. Terima kasih!
 
                 {availableCategories.length > 1 && (
                     <div className="booking-section">
-                        <label className="section-label">Kategori Tiket</label>
-                        <select 
-                            aria-label="Kategori tiket" className="class-select" 
-                            value={selectedCategory} 
-                            onChange={(e) => setSelectedCategory(e.target.value as TicketCategory)}
-                        >
-                            {availableCategories.map(cat => (
-                                <option key={cat.value} value={cat.value}>{cat.label}</option>
-                            ))}
-                        </select>
+                        
+                        <CustomDropdown label="Kategori Tiket" value={selectedCategory} onChange={value => setSelectedCategory(value as TicketCategory)} options={availableCategories.map(category => ({ value: category.value, city: category.label }))} />
                     </div>
                 )}
 

@@ -35,7 +35,7 @@ const AboutUs: React.FC = () => {
             <ul className="contact-list">
               <li>
                 <span className="icon">📍</span>
-                <span>Harbour Bay Terminal, Batam, Indonesia</span>
+                <span>Batam, Indonesia</span>
               </li>
               <li>
                 <span className="icon">📞</span>
@@ -43,10 +43,7 @@ const AboutUs: React.FC = () => {
                   +62 852 6518 2020 (WhatsApp)
                 </a>
               </li>
-              <li>
-                <span className="icon">✉️</span>
-                <a href="mailto:cs@reservasi.id">cs@reservasi.id</a>
-              </li>
+        
             </ul>
 
             {/* Social Media Icons */}

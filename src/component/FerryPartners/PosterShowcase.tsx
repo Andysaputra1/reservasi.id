@@ -1,3 +1,4 @@
+import CustomDropdown from '../ui/CustomDropdown';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -149,9 +150,9 @@ export default function PosterShowcase({ countryRequest = null }: { countryReque
 
         <div className="poster-filter-panel" data-reveal data-reveal-delay="80">
           <div className="poster-filters">
-            <label htmlFor="poster-country"><span>{t('Negara tujuan')}</span><select id="poster-country" value={filters.country} onChange={event => changeFilter('country', event.target.value)}><option value="">{t('Semua negara')}</option>{filterOptions(filters, 'country').map(country => <option key={country} value={country}>{t(country)}</option>)}</select></label>
-            <label htmlFor="poster-service"><span>{t('Jenis layanan')}</span><select id="poster-service" value={filters.service} onChange={event => changeFilter('service', event.target.value)}><option value="">{t('Semua layanan')}</option>{filterOptions(filters, 'service').map(service => <option key={service} value={service}>{serviceLabel(service)}</option>)}</select></label>
-            <label htmlFor="poster-provider"><span>{t('Provider')}</span><select id="poster-provider" value={filters.provider} onChange={event => changeFilter('provider', event.target.value)}><option value="">{t('Semua provider')}</option>{filterOptions(filters, 'provider').map(provider => <option key={provider} value={provider}>{provider}</option>)}</select></label>
+            <CustomDropdown id="poster-country" label={t('Negara tujuan')} value={filters.country} onChange={value => changeFilter('country', value)} options={[{ value: '', city: t('Semua negara') }, ...filterOptions(filters, 'country').map(option => ({ value: option, city: option }))]} />
+            <CustomDropdown id="poster-service" label={t('Jenis layanan')} value={filters.service} onChange={value => changeFilter('service', value)} options={[{ value: '', city: t('Semua layanan') }, ...filterOptions(filters, 'service').map(option => ({ value: option, city: serviceLabel(option) }))]} />
+            <CustomDropdown id="poster-provider" label={t('Provider')} value={filters.provider} onChange={value => changeFilter('provider', value)} options={[{ value: '', city: t('Semua provider') }, ...filterOptions(filters, 'provider').map(option => ({ value: option, city: option }))]} />
           </div>
           <div className="poster-filter-note"><span>{t('Bebas pilih filter, atau jelajahi semuanya.')}</span>{activeFilters > 0 && <button onClick={reset}>{t('Reset filter')} <span aria-hidden="true">×</span></button>}</div>
         </div>

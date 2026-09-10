@@ -1,3 +1,4 @@
+import CustomDropdown from '../ui/CustomDropdown';
 import { useLanguage } from '../../i18n/LanguageContext';
 import React, { useState, useEffect, useMemo } from 'react';
 import './Navbar.css';
@@ -280,13 +281,13 @@ Mohon infonya. Terima kasih!`.trim();
                     </div>
 
                     <div className="booking-section">
-                        <label className="section-label">{t("Kategori Tiket")}</label>
+                        
                         <div className="custom-select-wrapper">
-                            <select aria-label={t("Kategori tiket")} className="navbar-ferry-select" value={ticketClass} onChange={(e) => setTicketClass(e.target.value as 'standard' | 'wni' | 'vip')}>
-                                <option value="standard">{t("Paspor Asing / Umum")}</option>
-                                {selectedSchedule.prices.wniAdult && <option value="wni">{t("Paspor Indonesia (WNI)")}</option>}
-                                {selectedSchedule.prices.vipAdult && <option value="vip">{t("Kelas VIP")}</option>}
-                            </select>
+                            <CustomDropdown label={t('Kategori tiket')} value={ticketClass} onChange={value => setTicketClass(value as 'standard' | 'wni' | 'vip')} options={[
+                              { value: 'standard', city: t('Paspor Asing / Umum') },
+                              ...(selectedSchedule.prices.wniAdult ? [{ value: 'wni', city: t('Paspor Indonesia (WNI)') }] : []),
+                              ...(selectedSchedule.prices.vipAdult ? [{ value: 'vip', city: t('Kelas VIP') }] : []),
+                            ]} />
                         </div>
                     </div>
 
