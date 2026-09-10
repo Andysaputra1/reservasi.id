@@ -1,7 +1,8 @@
+import useDialog from '../ui/useDialog';
 import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import './FerryCard.css';
-import { TicketClasses } from '../../data/FerryData'; 
+import type { TicketClasses } from '../../data/FerryData'; 
 
 interface FerryProps {
   name: string; 
@@ -20,6 +21,7 @@ type TicketCategory = 'regular' | 'wni' | 'vip';
 const FerryCard: React.FC<FerryProps> = ({ name, image, origin, destination, time, prices, note, fromPort, toPort }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showBooking, setShowBooking] = useState(false);
+  const dialogRef = useDialog(showBooking, () => setShowBooking(false));
   
   const [tripType, setTripType] = useState<'oneWay' | 'twoWay'>('twoWay');
   const [selectedCategory, setSelectedCategory] = useState<TicketCategory>('regular');
@@ -115,7 +117,7 @@ Saya ingin memesan tiket ferry:
 Mohon info ketersediaannya. Terima kasih!
     `.trim();
 
-    window.open(`https://wa.me/6285265182020?text=${encodeURIComponent(message)}`, '_blank');
+    window.open(`https://wa.me/6285265182020?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
     setShowBooking(false);
   };
 
@@ -130,7 +132,7 @@ Mohon info ketersediaannya. Terima kasih!
         return "Tiket Reguler (All Passport)"; 
     };
 
-    const PriceRow = ({ label, ow, pp, cat = 'regular' }: any) => {
+    const PriceRow = ({ label, ow, pp, cat = 'regular' }: { label: string; ow: number; pp: number; cat?: TicketCategory }) => {
         let btnClass = '', btnText = 'Pesan';
         if (cat === 'wni') { btnClass = 'wni-promo-btn'; btnText = 'Pesan WNI'; }
         if (cat === 'vip') { btnClass = 'vip'; btnText = 'Pesan VIP'; }
@@ -138,8 +140,8 @@ Mohon info ketersediaannya. Terima kasih!
         return (
             <div className={`p-row ${cat === 'wni' ? 'id-promo-row' : ''} ${cat === 'vip' ? 'vip-class-row' : ''}`}>
                 <div className="p-col"><strong>{label}</strong></div>
-                <div className="p-col">Rp {ow.toLocaleString()}</div>
-                <div className="p-col">Rp {pp.toLocaleString()}</div>
+                <div className="p-col" data-label="Sekali jalan">Rp {ow.toLocaleString()}</div>
+                <div className="p-col" data-label="Pulang pergi">Rp {pp.toLocaleString()}</div>
                 <div className="p-col action">
                     <button className={`btn-book-small ${btnClass}`} onClick={() => handleOpenBooking(cat)}>
                         {btnText}
@@ -200,7 +202,7 @@ Mohon info ketersediaannya. Terima kasih!
       {/* HEADER KARTU */}
       <div className="ticket-card">
         <div className="ticket-main">
-          <div className="carrier-logo"><img src={image} alt={name} /></div>
+          <div className="carrier-logo"><img loading="lazy" decoding="async" src={image} alt={name} /></div>
           <div className="carrier-info">
             <h4>{name}</h4>
             <span className="route-badge">{fromPort} ➝ {toPort}</span> 
@@ -226,8 +228,8 @@ Mohon info ketersediaannya. Terima kasih!
                 {(prices.wniAdult?.oneWay || prices.child.oneWay || prices.adult.oneWay).toLocaleString('id-ID')}
             </span>
           </div>
-          <button className="btn-select" onClick={() => setIsOpen(!isOpen)}>
-            {isOpen ? 'Tutup' : 'Pilih'} <span className={`arrow ${isOpen ? 'up' : 'down'}`}>▼</span>
+          <button aria-expanded={isOpen} className="btn-select" onClick={() => setIsOpen(!isOpen)}>
+            {isOpen ? 'Tutup detail' : 'Lihat tiket'} <span className={`arrow ${isOpen ? 'up' : 'down'}`}>▼</span>
           </button>
         </div>
       </div>
@@ -248,18 +250,18 @@ Mohon info ketersediaannya. Terima kasih!
       {/* POPUP MODAL */}
       {showBooking && createPortal(
         <div className="booking-overlay" onClick={() => setShowBooking(false)}>
-            <div className="booking-card" onClick={(e) => e.stopPropagation()}>
+            <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Atur pesanan ferry" tabIndex={-1} className="booking-card" onClick={(e) => e.stopPropagation()}>
                 
                 <div className="booking-header-row">
                     <h3>Atur Pesanan</h3>
-                    <button className="btn-close-booking" onClick={() => setShowBooking(false)}>✕</button>
+                    <button aria-label="Tutup pemesanan" className="btn-close-booking" onClick={() => setShowBooking(false)}>✕</button>
                 </div>
 
                 <div className="booking-section">
                     <label className="section-label">Tipe Perjalanan</label>
                     <div className="toggle-container">
-                        <button className={`toggle-btn ${tripType === 'oneWay' ? 'active' : ''}`} onClick={() => setTripType('oneWay')}>Sekali Jalan</button>
-                        <button className={`toggle-btn ${tripType === 'twoWay' ? 'active' : ''}`} onClick={() => setTripType('twoWay')}>Pulang Pergi (PP)</button>
+                        <button aria-pressed={tripType === 'oneWay'} className={`toggle-btn ${tripType === 'oneWay' ? 'active' : ''}`} onClick={() => setTripType('oneWay')}>Sekali Jalan</button>
+                        <button aria-pressed={tripType === 'twoWay'} className={`toggle-btn ${tripType === 'twoWay' ? 'active' : ''}`} onClick={() => setTripType('twoWay')}>Pulang Pergi (PP)</button>
                     </div>
                 </div>
 
@@ -267,7 +269,7 @@ Mohon info ketersediaannya. Terima kasih!
                     <div className="booking-section">
                         <label className="section-label">Kategori Tiket</label>
                         <select 
-                            className="class-select" 
+                            aria-label="Kategori tiket" className="class-select" 
                             value={selectedCategory} 
                             onChange={(e) => setSelectedCategory(e.target.value as TicketCategory)}
                         >
@@ -288,9 +290,9 @@ Mohon info ketersediaannya. Terima kasih!
                             <span className="c-price">IDR {currentAdultPrice.toLocaleString()} /pax</span>
                         </div>
                         <div className="pax-stepper small">
-                            <button className="step-btn" onClick={() => setPax({...pax, adult: Math.max(0, pax.adult - 1)})}>−</button>
+                            <button aria-label="Kurangi penumpang dewasa" disabled={pax.adult <= 0} className="step-btn" onClick={() => setPax({...pax, adult: Math.max(0, pax.adult - 1)})}>−</button>
                             <span className="pax-number">{pax.adult}</span>
-                            <button className="step-btn" onClick={() => setPax({...pax, adult: pax.adult + 1})}>+</button>
+                            <button aria-label="Tambah penumpang dewasa" className="step-btn" onClick={() => setPax({...pax, adult: pax.adult + 1})}>+</button>
                         </div>
                     </div>
 
@@ -307,17 +309,17 @@ Mohon info ketersediaannya. Terima kasih!
                             </span>
                         </div>
                         <div className="pax-stepper small">
-                            <button className="step-btn" onClick={() => setPax({...pax, child: Math.max(0, pax.child - 1)})}>−</button>
+                            <button aria-label="Kurangi penumpang anak" disabled={pax.child <= 0} className="step-btn" onClick={() => setPax({...pax, child: Math.max(0, pax.child - 1)})}>−</button>
                             <span className="pax-number">{pax.child}</span>
-                            <button className="step-btn" onClick={() => setPax({...pax, child: pax.child + 1})}>+</button>
+                            <button aria-label="Tambah penumpang anak" className="step-btn" onClick={() => setPax({...pax, child: pax.child + 1})}>+</button>
                         </div>
                     </div>
                 </div>
 
-                <div className="booking-footer">
+                <div className="booking-footer"><p className="booking-note">Harga dan jadwal dikonfirmasi kembali oleh admin sebelum pembayaran.</p>
                     <div className="total-section">
-                        <span className="total-label">Total ({totalPax} Pax)</span>
-                        <span className="total-amount">IDR {totalEstimation.toLocaleString('id-ID')}</span>
+                        <span className="total-label">Estimasi ({totalPax} orang)</span>
+                        <span aria-live="polite" className="total-amount">IDR {totalEstimation.toLocaleString('id-ID')}</span>
                     </div>
                     <button 
                         className={`btn-wa-premium ${totalPax === 0 ? 'disabled' : ''}`} 

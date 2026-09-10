@@ -1,126 +1,72 @@
-import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import './Hero.css';
-import img1 from '../../assets/herophotos/image1.png';
-import img2 from '../../assets/herophotos/image2.png';
-import img3 from '../../assets/herophotos/image3.png';
-import img4 from '../../assets/herophotos/image4.png';
-import img5 from '../../assets/herophotos/image5.png';
-import img6 from '../../assets/herophotos/image6.png';
-import img7 from '../../assets/herophotos/image7.png';
-import img8 from '../../assets/herophotos/image8.png';
-import img9 from '../../assets/herophotos/image9.png';
-
-
-
-// Gambar Carousel (tetap sama)
-const heroImages = [
-  img1,img2,img3,img4,img5,img6,img7,img8,img9
-];
-
-const Hero: React.FC = () => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  
-  // State untuk input user
-  const [origin, setOrigin] = useState('');
-  const [destination, setDestination] = useState('');
-
-  // Auto-slide logic (tetap sama)
+import img1 from '../../assets/herophotos/image1.webp';
+import img2 from '../../assets/herophotos/image2.webp';
+import img3 from '../../assets/herophotos/image3.webp';
+import CountryDropdown from '../ui/CountryDropdown';
+const images = [img1, img2, img3];
+export default function Hero() {
+  const { t, language } = useLanguage();
+  const [slide, setSlide] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [origin, setOrigin] = useState('Indonesia');
+  const [destination, setDestination] = useState('Singapura');
+  const [error, setError] = useState('');
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % heroImages.length);
-    }, 5000);
-    return () => clearInterval(interval);
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPlaying(!preference.matches);
+    const update = () => setPlaying(!preference.matches);
+    preference.addEventListener('change', update);
+    return () => preference.removeEventListener('change', update);
   }, []);
-
-  // Logic Redirect ke WhatsApp
-  const handleWhatsApp = () => {
-    // 1. Validasi sederhana
-    if (!origin || !destination) {
-      alert("Mohon isi kota asal dan tujuan terlebih dahulu!");
-      return;
-    }
-
-    // 2. Format Pesan
-    const message = `Halo Admin Reservasi.id! Saya mau tanya ketersediaan tiket kapal dari *${origin}* ke *${destination}*. Mohon infonya, terima kasih.`;
-    
-    // 3. Encode pesan agar aman di URL
-    const encodedMessage = encodeURIComponent(message);
-    
-    // 4. Buka WhatsApp
-    window.open(`https://wa.me/6285265182020?text=${encodedMessage}`, '_blank');
-  };
-
+  useEffect(() => {
+    if (!playing) return;
+    const timer = window.setInterval(() => {
+      if (!document.hidden) setSlide(current => (current + 1) % images.length);
+    }, 7000);
+    return () => window.clearInterval(timer);
+  }, [playing]);
+  function enquire(event: FormEvent) {
+    event.preventDefault();
+    if (origin === destination) { setError('Negara asal dan tujuan harus berbeda.'); return; }
+    setError('');
+    const message = language === 'en'
+      ? `Hello Reservasi.id! I'd like to check ferry schedules and fares from ${t(origin)} to ${t(destination)}. Please let me know about availability. Thank you.`
+      : `Halo Admin Reservasi.id! Saya ingin cek jadwal dan harga tiket ferry dari ${origin} ke ${destination}. Mohon info ketersediaannya. Terima kasih.`;
+    window.open(`https://wa.me/6285265182020?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+  }
   return (
-    <section id="home" className="hero-section">
-      {/* Background Carousel */}
-      {heroImages.map((img, index) => (
-        <div 
-          key={index}
-          className={`hero-bg ${index === currentIndex ? 'active' : ''}`}
-          style={{ backgroundImage: `url(${img})` }}
-        />
-      ))}
-      <div className="hero-overlay"></div>
-
+    <section id="home" className="hero-section" aria-label={t("Rencanakan perjalanan ferry")}>
+      <div className="hero-photos" aria-hidden="true">{images.map((src, index) => <img key={src} src={src} alt="" className={`hero-bg ${index === slide ? 'active' : ''}`} fetchPriority={index === 0 ? 'high' : 'auto'} />)}</div>
+      <div className="hero-overlay" />
       <div className="container hero-content">
-        
-        {/* Teks Kiri */}
         <div className="hero-text">
-          <h1>Jelajahi Lautan <br/> Tanpa Batas</h1>
-          <p>
-            Konsultasikan rencana perjalanan Anda. 
-            Kami siap membantu mencarikan tiket kapal ferry terbaik 
-            untuk rute Indonesia, Singapura, & Malaysia.
-          </p>
-          <div className="hero-stats">
-            <div className="stat-item"><span>Fast</span>Respon</div>
-            <div className="stat-item"><span>Best</span>Price</div>
-          </div>
+          <span className="hero-eyebrow">{t("INDONESIA \u00b7 SINGAPURA \u00b7 MALAYSIA")}</span>
+          <h1>{t("Perjalanan seru")}<br />{t("dimulai dari")}<br /><em>{t("seberang laut.")}</em></h1>
+          <p>{t("Temukan tiket ferry untuk perjalanan berikutnya. Pilih rute Anda, kami bantu urusan jadwal dan pemesanannya.")}</p>
+          <a className="hero-explore" href="#destinations">{t("Temukan destinasi")}<span aria-hidden="true">↗</span></a>
+          <div className="hero-stats"><div className="stat-item"><span>{t("3 negara")}</span>{t("Satu perjalanan baru")}</div><div className="stat-item"><span>{t("Via WhatsApp")}</span>{t("Dibantu langsung oleh admin")}</div></div>
         </div>
-
-        {/* --- KARTU KANAN (YANG DIUBAH) --- */}
-        <div className="reservation-card">
-          <div className="card-header">
-            <h3>Tanyakan Tiket Anda</h3>
-            <p>Chat admin langsung untuk cek jadwal & harga.</p>
+        <form className="reservation-card" onSubmit={enquire}>
+          <div className="booking-kicker"><span aria-hidden="true">↗</span>{t("MULAI PERJALANAN ANDA")}</div>
+          <div className="card-header"><h2>{t("Mau berlayar ke mana?")}</h2><p>{t("Pilih rute, lalu tanyakan jadwal & harga.")}</p></div>
+          <div className="hero-route-fields">
+            <CountryDropdown label="Dari negara" value={origin} onChange={value => { setOrigin(value); setError(''); }} />
+            <button type="button" className="hero-swap" aria-label={t("Tukar negara asal dan tujuan")} onClick={() => { setOrigin(destination); setDestination(origin); setError(''); }}>⇅</button>
+            <CountryDropdown label="Ke negara" value={destination} onChange={value => { setDestination(value); setError(''); }} />
           </div>
-          
-          {/* Input 1: Dari */}
-          <div className="input-group">
-            <label>Dari (Asal)</label>
-            <input 
-              type="text" 
-              placeholder="Contoh: Batam Center" 
-              value={origin}
-              onChange={(e) => setOrigin(e.target.value)}
-            />
-          </div>
-
-          {/* Input 2: Ke */}
-          <div className="input-group">
-            <label>Ke (Tujuan)</label>
-            <input 
-              type="text" 
-              placeholder="Contoh: HarbourFront SG" 
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-            />
-          </div>
-
-          <button onClick={handleWhatsApp} className="btn-search">
-            Chat via WhatsApp 
-            {/* Ikon WA kecil (Opsional) */}
-            <svg style={{marginLeft: '8px', verticalAlign: 'middle'}} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-          </button>
-
-          <p className="helper-text">
-            *Anda akan diarahkan ke chat WhatsApp Admin.
-          </p>
-        </div>
-
+          {error && <p className="form-error" role="alert">{t(error)}</p>}
+          <button type="submit" className="btn-search">{t("Tanyakan tiket via WhatsApp")}<span aria-hidden="true">↗</span></button>
+          <p className="helper-text">{t("Anda akan diarahkan ke WhatsApp admin.")}<br />{t("Belum ada pembayaran pada tahap ini.")}</p>
+          <a className="hero-schedule-link" href="#schedule">{t("Ingin membandingkan? Lihat jadwal kapal \u2192")}</a>
+        </form>
       </div>
+      <div className="container hero-bottom"><span>{t("DESTINASI DEKAT, CERITA BARU.")}</span><div className="slide-controls" aria-label={t("Kontrol foto latar")}>
+        {images.map((_, index) => <button key={index} type="button" aria-label={`${t('Tampilkan foto')} ${index + 1}`} aria-pressed={slide === index} onClick={() => { setSlide(index); setPlaying(false); }} className={slide === index ? 'active' : ''} />)}
+        <button type="button" className="slide-pause" aria-label={t(playing ? 'Jeda pergantian foto' : 'Putar pergantian foto')} onClick={() => setPlaying(!playing)}>{playing ? 'Ⅱ' : '▷'}</button>
+      </div></div>
     </section>
   );
-};
-
-export default Hero;
+}
