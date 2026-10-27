@@ -64,7 +64,7 @@ export default function Hero() {
           <div className="hero-stats"><div className="stat-item"><span>{t("3 negara")}</span>{t("Satu perjalanan baru")}</div><div className="stat-item"><span>{t("Via WhatsApp")}</span>{t("Dibantu langsung oleh admin")}</div></div>
         </div>
         <form className="reservation-card" onSubmit={enquire}>
-          <div className="booking-kicker"><span aria-hidden="true">↗</span>{t("MULAI PERJALANAN ANDA")}</div>
+          <div className="booking-kicker">{t("MULAI PERJALANAN ANDA")}</div>
           <div className="card-header"><h2>{t("Mau berlayar ke mana?")}</h2><p>{t("Pilih rute, lalu tanyakan jadwal & harga.")}</p></div>
           <div className="hero-route-fields">
             <CountryDropdown label="Dari" value={origin} onChange={value => { setOrigin(value); setError(''); }} />
