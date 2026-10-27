@@ -2,23 +2,24 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { useEffect, useState } from 'react';
 import { useContent, useContact, useSetting } from '../../lib/content';
 import { mediaUrl } from '../../lib/supabase';
+import type { Country } from '../../data/posterCatalog';
 import './Navbar.css';
 import imgSingapore from '../../assets/Singapore.webp';
 import imgBatam from '../../assets/Batam.webp';
 import imgMalaysia from '../../assets/Malaysia.webp';
 const fallbackSearch = [
- {id:'singapore',name:'Singapura',type:'Destinasi',image:imgSingapore},
- {id:'batam',name:'Batam',type:'Destinasi',image:imgBatam},
- {id:'malaysia',name:'Malaysia',type:'Destinasi',image:imgMalaysia},
+ {id:'singapore',name:'Singapura',type:'Destinasi',image:imgSingapore,country:'Singapura'},
+ {id:'batam',name:'Batam',type:'Destinasi',image:imgBatam,country:'Indonesia'},
+ {id:'malaysia',name:'Malaysia',type:'Destinasi',image:imgMalaysia,country:'Malaysia'},
 ];
-const Navbar = () => {
+const Navbar = ({ onExplore }: { onExplore?: (country: Country) => void }) => {
  const { t, language, setLanguage } = useLanguage();
  const { rows } = useContent(); const contact = useContact(); const sections=useSetting('sections');
  const [isScrolled,setIsScrolled]=useState(false);
  const [isMobileMenuOpen,setIsMobileMenuOpen]=useState(false);
  const [searchTerm,setSearchTerm]=useState('');
  const [showSuggestions,setShowSuggestions]=useState(false);
- const searchData=sections.destinations===false?[]:rows?rows.destinations.map(d=>({id:d.id,name:d[`title_${language}`],type:t('Destinasi'),image:mediaUrl(rows.media_assets.find(m=>m.id===d.image_id))})):fallbackSearch;
+ const searchData=sections.destinations===false?[]:rows?rows.destinations.map(d=>({id:d.id,name:d[`title_${language}`],type:t('Destinasi'),image:mediaUrl(rows.media_assets.find(m=>m.id===d.image_id)),country:rows.countries.find(c=>c.id===d.country_id)?.name_id})):fallbackSearch;
  const filteredSearch=searchData.filter(item=>`${item.name} ${t(item.name)}`.toLowerCase().includes(searchTerm.toLowerCase()));
  useEffect(()=>{const update=()=>setIsScrolled(window.scrollY>20);update();window.addEventListener('scroll',update,{passive:true});return()=>window.removeEventListener('scroll',update);},[]);
   return (
@@ -57,7 +58,7 @@ const Navbar = () => {
                   <div className="search-dropdown">
                     {filteredSearch.length > 0 ? (
                       filteredSearch.map(item => (
-                        <a key={item.id} href="#destinations" className="search-item" onClick={() => { setIsMobileMenuOpen(false); setShowSuggestions(false); }}>
+                        <a key={item.id} href={onExplore && item.country ? '#schedule' : '#destinations'} className="search-item" onClick={event => { if (onExplore && item.country) { event.preventDefault(); onExplore(item.country); } setSearchTerm(''); setIsMobileMenuOpen(false); setShowSuggestions(false); }}>
                           <img src={item.image} alt={t(item.name)} />
                           <div><span className="item-name">{t(item.name)}</span><span className="item-type">{t(item.type)}</span></div>
                         </a>

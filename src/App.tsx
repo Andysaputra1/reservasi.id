@@ -25,7 +25,7 @@ function Website() {
   return (
     <>
       <a className="skip-link" href="#main">{t("Lewati ke konten utama")}</a>
-      <Navbar/>
+      <Navbar onExplore={sections.catalog !== false ? country => setCatalogRequest({ country }) : undefined}/>
       <main id="main">
       {sections.hero !== false && <Hero/>}
       {sections.destinations !== false && <TopDestinations onExplore={country => setCatalogRequest({ country })}/>}
