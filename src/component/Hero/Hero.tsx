@@ -60,7 +60,7 @@ export default function Hero() {
           <span className="hero-eyebrow">{t("INDONESIA \u00b7 SINGAPURA \u00b7 MALAYSIA")}</span>
           <h1>{t("Perjalanan seru")}<br />{t("dimulai dari")}<br /><em>{t("seberang laut.")}</em></h1>
           <p>{t("Temukan tiket ferry untuk perjalanan berikutnya. Pilih rute Anda, kami bantu urusan jadwal dan pemesanannya.")}</p>
-          <a className="hero-explore" href="#destinations">{t("Temukan destinasi")}<span aria-hidden="true">↗</span></a>
+          <a className="hero-explore" href="#destinations">{t("Temukan destinasi")}</a>
           <div className="hero-stats"><div className="stat-item"><span>{t("3 negara")}</span>{t("Satu perjalanan baru")}</div><div className="stat-item"><span>{t("Via WhatsApp")}</span>{t("Dibantu langsung oleh admin")}</div></div>
         </div>
         <form className="reservation-card" onSubmit={enquire}>
@@ -72,7 +72,7 @@ export default function Hero() {
             <CountryDropdown label="Ke" value={destination} onChange={value => { setDestination(value); setError(''); }} />
           </div>
           {error && <p className="form-error" role="alert">{t(error)}</p>}
-          <button type="submit" className="btn-search">{t("Tanyakan tiket via WhatsApp")}<span aria-hidden="true">↗</span></button>
+          <button type="submit" className="btn-search">{t("Tanyakan tiket via WhatsApp")}</button>
           <p className="helper-text">{t("Anda akan diarahkan ke WhatsApp admin.")}<br />{t("Belum ada pembayaran pada tahap ini.")}</p>
           <a className="hero-schedule-link" href="#schedule">{t("Ingin membandingkan? Lihat jadwal kapal \u2192")}</a>
         </form>
