@@ -141,7 +141,8 @@ export default function PosterShowcase({ countryRequest = null }: { countryReque
     const card = track?.querySelector<HTMLElement>('.poster-card');
     if (track && card) track.scrollBy({ left: direction * (card.getBoundingClientRect().width + 24), behavior: reducedMotion ? 'instant' : 'smooth' });
   }
-  function openPoster(item: Poster) { setZoom(1); setSelected(item); }
+  const defaultZoom = () => window.matchMedia('(min-width: 1001px)').matches ? .75 : 1;
+  function openPoster(item: Poster) { setZoom(defaultZoom()); setSelected(item); }
   function reset() { setFilters(emptyFilters); pauseBriefly(); }
   function whatsapp(item: Poster) {
     const message = language === 'en'
@@ -193,7 +194,7 @@ export default function PosterShowcase({ countryRequest = null }: { countryReque
 
       {selected && createPortal(<div className="poster-overlay" onClick={() => setSelected(null)}><div className="poster-dialog" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="poster-dialog-title" tabIndex={-1} onClick={event => event.stopPropagation()}>
         <header className="poster-dialog-header"><div><p>{selected.provider}</p><h2 id="poster-dialog-title">{selected.title[language]}</h2></div><button onClick={() => setSelected(null)} aria-label={t('Tutup poster')}>×</button></header>
-        <div className="poster-dialog-tools"><span>{t('Geser gambar setelah diperbesar')}</span><div><button disabled={zoom <= 1} onClick={() => setZoom(value => Math.max(1, value - .5))} aria-label={t('Perkecil gambar')}>−</button><button onClick={() => setZoom(1)} aria-label={t('Reset ukuran gambar')}>{Math.round(zoom * 100)}%</button><button disabled={zoom >= 3} onClick={() => setZoom(value => Math.min(3, value + .5))} aria-label={t('Perbesar gambar')}>+</button></div></div>
+        <div className="poster-dialog-tools"><span>{t('Geser gambar setelah diperbesar')}</span><div><button disabled={zoom <= .5} onClick={() => setZoom(value => Math.max(.5, value - .25))} aria-label={t('Perkecil gambar')}>−</button><button onClick={() => setZoom(defaultZoom())} aria-label={t('Reset ukuran gambar')}>{Math.round(zoom * 100)}%</button><button disabled={zoom >= 3} onClick={() => setZoom(value => Math.min(3, value + .25))} aria-label={t('Perbesar gambar')}>+</button></div></div>
         <div className="poster-viewer" tabIndex={0} role="region" aria-label={t('Gambar poster')}><img src={selected.image} alt={`${selected.title[language]}. ${selected.description[language]}`} style={{ width: `${zoom * 100}%` }} /></div>
         <footer className="poster-dialog-footer"><div><p>{language === 'en' ? 'Validity' : 'Masa berlaku'}: {selected.validFrom || '?'} ? {selected.validUntil || (language === 'en' ? 'Until updated' : 'Sampai diperbarui')}</p>{selected.period && <p className={isExpired(selected) ? 'poster-expired' : ''}>{selected.period[language]}</p>}<p>{t(isExpired(selected) ? 'Penawaran ini sudah berakhir. Tanyakan informasi terbaru kepada admin.' : 'Konfirmasi harga dan ketersediaan dengan admin.')}</p><small>{t('Tulisan pada poster mengikuti bahasa aslinya.')}</small></div><a href={whatsapp(selected)} target="_blank" rel="noreferrer">{t('Tanyakan via WhatsApp')}</a></footer>
       </div></div>, document.body)}
