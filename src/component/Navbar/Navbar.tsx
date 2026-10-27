@@ -21,6 +21,12 @@ const Navbar = ({ onExplore }: { onExplore?: (country: Country) => void }) => {
  const [showSuggestions,setShowSuggestions]=useState(false);
  const searchData=sections.destinations===false?[]:rows?rows.destinations.map(d=>({id:d.id,name:d[`title_${language}`],type:t('Destinasi'),image:mediaUrl(rows.media_assets.find(m=>m.id===d.image_id)),country:rows.countries.find(c=>c.id===d.country_id)?.name_id})):fallbackSearch;
  const filteredSearch=searchData.filter(item=>`${item.name} ${t(item.name)}`.toLowerCase().includes(searchTerm.toLowerCase()));
+ const pickSearch=(item:typeof searchData[number])=>{
+  if(onExplore&&item.country) onExplore(item.country);
+  else document.getElementById('destinations')?.scrollIntoView({behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'});
+  setSearchTerm(''); setIsMobileMenuOpen(false); setShowSuggestions(false);
+  (document.activeElement as HTMLElement | null)?.blur();
+ };
  useEffect(()=>{const update=()=>setIsScrolled(window.scrollY>20);update();window.addEventListener('scroll',update,{passive:true});return()=>window.removeEventListener('scroll',update);},[]);
   return (
     <>
@@ -52,13 +58,15 @@ const Navbar = ({ onExplore }: { onExplore?: (country: Country) => void }) => {
                         aria-label={t("Cari destinasi")} type="search" placeholder={t("Cari destinasi...")} value={searchTerm}
                         onChange={(e) => { setSearchTerm(e.target.value); setShowSuggestions(true); }}
                         onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && searchTerm && filteredSearch[0]) { e.preventDefault(); pickSearch(filteredSearch[0]); } }}
                     />
                   </div>
                   {showSuggestions && searchTerm && (
-                  <div className="search-dropdown">
+                  // Keep focus in the input while pressing a result, so a slow click isn't lost to the blur timeout
+                  <div className="search-dropdown" onMouseDown={event => event.preventDefault()}>
                     {filteredSearch.length > 0 ? (
                       filteredSearch.map(item => (
-                        <a key={item.id} href={onExplore && item.country ? '#schedule' : '#destinations'} className="search-item" onClick={event => { if (onExplore && item.country) { event.preventDefault(); onExplore(item.country); } setSearchTerm(''); setIsMobileMenuOpen(false); setShowSuggestions(false); }}>
+                        <a key={item.id} href={onExplore && item.country ? '#schedule' : '#destinations'} className="search-item" onClick={event => { event.preventDefault(); pickSearch(item); }}>
                           <img src={item.image} alt={t(item.name)} />
                           <div><span className="item-name">{t(item.name)}</span><span className="item-type">{t(item.type)}</span></div>
                         </a>
